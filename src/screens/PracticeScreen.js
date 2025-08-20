@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getRandomAirport, getRandomAirports } from '../data/airports';
+import { getRandomAirport, getRandomAirports } from '../data/airportController';
 
 const PracticeScreen = () => {
   const [currentAirport, setCurrentAirport] = useState(null);
