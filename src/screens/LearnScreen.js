@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
-import { airports, searchAirports } from '../data/airports';
+import { airports, searchAirports } from '../data/airportController';
 
 const LearnScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');

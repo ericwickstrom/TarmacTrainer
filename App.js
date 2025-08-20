@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
-import { airports, getRandomAirport } from './src/data/airports';
+import { airports, getRandomAirport } from './src/data/airportController';
 
 export default function App() {
   const [quizStarted, setQuizStarted] = useState(false);
