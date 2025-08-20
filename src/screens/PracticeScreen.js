@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'reac
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getRandomAirport, getRandomAirports } from '../data/airportController';
 
-const PracticeScreen = () => {
+const PracticeScreen = ({ navigation }) => {
   const [currentAirport, setCurrentAirport] = useState(null);
   const [userAnswer, setUserAnswer] = useState('');
   const [score, setScore] = useState(0);
@@ -11,10 +11,17 @@ const PracticeScreen = () => {
   const [showAnswer, setShowAnswer] = useState(false);
   const [choiceOptions, setChoiceOptions] = useState([]);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
+  
+  // Round state
+  const [currentQuestion, setCurrentQuestion] = useState(1);
+  const [roundScore, setRoundScore] = useState(0);
+  const [roundStartTime, setRoundStartTime] = useState(null);
+  const [questionsAndAnswers, setQuestionsAndAnswers] = useState([]);
+  const [isRoundActive, setIsRoundActive] = useState(false);
 
   useEffect(() => {
     loadProgress();
-    nextQuestion();
+    startNewRound();
   }, []);
 
   const loadProgress = async () => {
@@ -35,6 +42,31 @@ const PracticeScreen = () => {
     } catch (error) {
       console.error('Error saving progress:', error);
     }
+  };
+
+  const startNewRound = () => {
+    setCurrentQuestion(1);
+    setRoundScore(0);
+    setRoundStartTime(Date.now());
+    setQuestionsAndAnswers([]);
+    setIsRoundActive(true);
+    nextQuestion();
+  };
+
+  const finishRound = () => {
+    const roundEndTime = Date.now();
+    const roundDuration = (roundEndTime - roundStartTime) / 1000; // in seconds
+    
+    const roundData = {
+      roundScore,
+      totalQuestions: 10,
+      roundTime: roundDuration,
+      questionsAndAnswers,
+      completedAt: new Date().toISOString()
+    };
+    
+    setIsRoundActive(false);
+    navigation.navigate('RoundSummary', { roundData });
   };
 
   const nextQuestion = () => {
@@ -63,22 +95,46 @@ const PracticeScreen = () => {
     const isCorrect = selectedOption.iata === currentAirport.iata;
     const newScore = isCorrect ? score + 1 : score;
     const newAttempts = totalAttempts + 1;
+    const newRoundScore = isCorrect ? roundScore + 1 : roundScore;
 
+    // Update overall stats
     setScore(newScore);
     setTotalAttempts(newAttempts);
     saveProgress(newScore, newAttempts);
 
+    // Update round stats
+    setRoundScore(newRoundScore);
+    
+    // Record this question and answer
+    const questionRecord = {
+      question: currentAirport,
+      selectedAnswer: selectedOption,
+      correctAnswer: currentAirport,
+      isCorrect,
+      questionNumber: currentQuestion
+    };
+    setQuestionsAndAnswers(prev => [...prev, questionRecord]);
+
+    const proceedToNext = () => {
+      if (currentQuestion >= 10) {
+        finishRound();
+      } else {
+        setCurrentQuestion(currentQuestion + 1);
+        nextQuestion();
+      }
+    };
+
     if (isCorrect) {
       setTimeout(() => {
         Alert.alert('Correct!', `${currentAirport.iata} is right!`, [
-          { text: 'Next', onPress: nextQuestion }
+          { text: currentQuestion >= 10 ? 'Finish Round' : 'Next', onPress: proceedToNext }
         ]);
       }, 500);
     } else {
       setShowAnswer(true);
       setTimeout(() => {
         Alert.alert('Incorrect', `The correct answer is ${currentAirport.iata}`, [
-          { text: 'Next', onPress: nextQuestion }
+          { text: currentQuestion >= 10 ? 'Finish Round' : 'Next', onPress: proceedToNext }
         ]);
       }, 500);
     }
@@ -88,13 +144,27 @@ const PracticeScreen = () => {
 
   return (
     <View style={styles.container}>
+      <View style={styles.roundProgressContainer}>
+        <Text style={styles.roundProgressText}>Question {currentQuestion} of 10</Text>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: `${(currentQuestion / 10) * 100}%` }]} />
+        </View>
+      </View>
+      
       <View style={styles.scoreContainer}>
-        <Text style={styles.scoreText}>Score: {score}/{totalAttempts}</Text>
-        {totalAttempts > 0 && (
-          <Text style={styles.percentageText}>
-            {Math.round((score / totalAttempts) * 100)}%
-          </Text>
-        )}
+        <View style={styles.scoreItem}>
+          <Text style={styles.scoreLabel}>Round</Text>
+          <Text style={styles.scoreText}>{roundScore}/10</Text>
+        </View>
+        <View style={styles.scoreItem}>
+          <Text style={styles.scoreLabel}>Overall</Text>
+          <Text style={styles.scoreText}>{score}/{totalAttempts}</Text>
+          {totalAttempts > 0 && (
+            <Text style={styles.percentageText}>
+              {Math.round((score / totalAttempts) * 100)}%
+            </Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.questionContainer}>
@@ -138,8 +208,20 @@ const PracticeScreen = () => {
       )}
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.skipButton} onPress={nextQuestion}>
-          <Text style={styles.skipButtonText}>Skip</Text>
+        <TouchableOpacity 
+          style={styles.skipButton} 
+          onPress={() => {
+            if (currentQuestion >= 10) {
+              finishRound();
+            } else {
+              setCurrentQuestion(currentQuestion + 1);
+              nextQuestion();
+            }
+          }}
+        >
+          <Text style={styles.skipButtonText}>
+            {currentQuestion >= 10 ? 'Finish Round' : 'Skip'}
+          </Text>
         </TouchableOpacity>
       </View> 
     </View>
@@ -152,11 +234,48 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#f5f5f5',
   },
+  roundProgressContainer: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  roundProgressText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#007AFF',
+    borderRadius: 4,
+  },
   scoreContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 30,
     paddingHorizontal: 10,
+  },
+  scoreItem: {
+    alignItems: 'center',
+  },
+  scoreLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
   },
   scoreText: {
     fontSize: 18,
@@ -164,7 +283,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   percentageText: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
     color: '#007AFF',
   },
