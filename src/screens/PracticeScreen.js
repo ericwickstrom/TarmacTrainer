@@ -141,7 +141,7 @@ const PracticeScreen = () => {
         <TouchableOpacity style={styles.skipButton} onPress={nextQuestion}>
           <Text style={styles.skipButtonText}>Skip</Text>
         </TouchableOpacity>
-      </View>
+      </View> 
     </View>
   );
 };
