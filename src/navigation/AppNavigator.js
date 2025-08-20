@@ -8,6 +8,7 @@ import HomeScreen from '../screens/HomeScreen';
 import PracticeScreen from '../screens/PracticeScreen';
 import LearnScreen from '../screens/LearnScreen';
 import ProgressScreen from '../screens/ProgressScreen';
+import RoundSummaryScreen from '../screens/RoundSummaryScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -34,6 +35,34 @@ const TabIcon = ({ name, focused }) => {
   );
 };
 
+const PracticeStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="PracticeMain" 
+        component={PracticeScreen}
+        options={{ 
+          title: 'Practice Mode',
+          headerStyle: { backgroundColor: '#007AFF' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: 'bold' }
+        }}
+      />
+      <Stack.Screen 
+        name="RoundSummary" 
+        component={RoundSummaryScreen}
+        options={{ 
+          title: 'Round Summary',
+          headerStyle: { backgroundColor: '#007AFF' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: 'bold' },
+          headerLeft: null
+        }}
+      />
+    </Stack.Navigator>
+  );
+};
+
 const MainTabs = () => {
   return (
     <Tab.Navigator
@@ -47,34 +76,46 @@ const MainTabs = () => {
           paddingBottom: 10,
           paddingTop: 10,
         },
-        headerStyle: {
-          backgroundColor: '#007AFF',
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
+        headerShown: false,
       })}
     >
       <Tab.Screen 
         name="Home" 
         component={HomeScreen}
-        options={{ title: 'TarmacTrainer' }}
+        options={{ 
+          title: 'TarmacTrainer',
+          headerShown: true,
+          headerStyle: { backgroundColor: '#007AFF' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: 'bold' }
+        }}
       />
       <Tab.Screen 
         name="Practice" 
-        component={PracticeScreen}
+        component={PracticeStack}
         options={{ title: 'Practice Mode' }}
       />
       <Tab.Screen 
         name="Learn" 
         component={LearnScreen}
-        options={{ title: 'Learn Airports' }}
+        options={{ 
+          title: 'Learn Airports',
+          headerShown: true,
+          headerStyle: { backgroundColor: '#007AFF' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: 'bold' }
+        }}
       />
       <Tab.Screen 
         name="Progress" 
         component={ProgressScreen}
-        options={{ title: 'Your Progress' }}
+        options={{ 
+          title: 'Your Progress',
+          headerShown: true,
+          headerStyle: { backgroundColor: '#007AFF' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: 'bold' }
+        }}
       />
     </Tab.Navigator>
   );
