@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getRandomAirport } from '../data/airports';
+import { getRandomAirport, getRandomAirports } from '../data/airports';
 
 const PracticeScreen = () => {
   const [currentAirport, setCurrentAirport] = useState(null);
@@ -9,6 +9,8 @@ const PracticeScreen = () => {
   const [score, setScore] = useState(0);
   const [totalAttempts, setTotalAttempts] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [choiceOptions, setChoiceOptions] = useState([]);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
 
   useEffect(() => {
     loadProgress();
@@ -36,18 +38,29 @@ const PracticeScreen = () => {
   };
 
   const nextQuestion = () => {
-    setCurrentAirport(getRandomAirport());
+    const correctAirport = getRandomAirport();
+    setCurrentAirport(correctAirport);
     setUserAnswer('');
     setShowAnswer(false);
+    setSelectedAnswer(null);
+    
+    // Generate 3 incorrect options
+    const wrongOptions = getRandomAirports(20)
+      .filter(airport => airport.iata !== correctAirport.iata)
+      .slice(0, 3);
+    
+    // Create array with correct answer and 3 wrong answers
+    const options = [correctAirport, ...wrongOptions];
+    
+    // Shuffle the options randomly
+    const shuffledOptions = options.sort(() => Math.random() - 0.5);
+    setChoiceOptions(shuffledOptions);
   };
 
-  const checkAnswer = () => {
-    if (!userAnswer.trim()) {
-      Alert.alert('Please enter an answer');
-      return;
-    }
-
-    const isCorrect = userAnswer.toUpperCase().trim() === currentAirport.iata;
+  const handleAnswerSelection = (selectedOption) => {
+    setSelectedAnswer(selectedOption);
+    
+    const isCorrect = selectedOption.iata === currentAirport.iata;
     const newScore = isCorrect ? score + 1 : score;
     const newAttempts = totalAttempts + 1;
 
@@ -56,14 +69,18 @@ const PracticeScreen = () => {
     saveProgress(newScore, newAttempts);
 
     if (isCorrect) {
-      Alert.alert('Correct!', `${currentAirport.iata} is right!`, [
-        { text: 'Next', onPress: nextQuestion }
-      ]);
+      setTimeout(() => {
+        Alert.alert('Correct!', `${currentAirport.iata} is right!`, [
+          { text: 'Next', onPress: nextQuestion }
+        ]);
+      }, 500);
     } else {
       setShowAnswer(true);
-      Alert.alert('Incorrect', `The correct answer is ${currentAirport.iata}`, [
-        { text: 'Next', onPress: nextQuestion }
-      ]);
+      setTimeout(() => {
+        Alert.alert('Incorrect', `The correct answer is ${currentAirport.iata}`, [
+          { text: 'Next', onPress: nextQuestion }
+        ]);
+      }, 500);
     }
   };
 
@@ -83,31 +100,48 @@ const PracticeScreen = () => {
       <View style={styles.questionContainer}>
         <Text style={styles.questionText}>What is the IATA code for:</Text>
         <Text style={styles.airportName}>{currentAirport.name}</Text>
-        <Text style={styles.cityText}>{currentAirport.city}, {currentAirport.country}</Text>
+        <Text style={styles.cityText}>{currentAirport.location}, {currentAirport.country}</Text>
       </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Enter IATA code (e.g., LAX)"
-        value={userAnswer}
-        onChangeText={setUserAnswer}
-        autoCapitalize="characters"
-        maxLength={3}
-      />
+      <View style={styles.choicesContainer}>
+        {choiceOptions.map((option, index) => {
+          const isSelected = selectedAnswer && selectedAnswer.iata === option.iata;
+          const isCorrect = option.iata === currentAirport.iata;
+          const shouldShowCorrect = showAnswer && isCorrect;
+          const shouldShowIncorrect = showAnswer && isSelected && !isCorrect;
+          
+          return (
+            <TouchableOpacity
+              key={option.iata}
+              style={[
+                styles.choiceButton,
+                isSelected && styles.selectedChoiceButton,
+                shouldShowCorrect && styles.correctChoiceButton,
+                shouldShowIncorrect && styles.incorrectChoiceButton,
+              ]}
+              onPress={() => !selectedAnswer && handleAnswerSelection(option)}
+              disabled={!!selectedAnswer}
+            >
+              <Text style={[
+                styles.choiceButtonText,
+                (isSelected || shouldShowCorrect) && styles.selectedChoiceButtonText,
+              ]}>
+                {option.iata}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       {showAnswer && (
         <Text style={styles.answerText}>Answer: {currentAirport.iata}</Text>
       )}
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.submitButton} onPress={checkAnswer}>
-          <Text style={styles.buttonText}>Submit</Text>
-        </TouchableOpacity>
-        
         <TouchableOpacity style={styles.skipButton} onPress={nextQuestion}>
           <Text style={styles.skipButtonText}>Skip</Text>
         </TouchableOpacity>
-      </View>
+      </View> 
     </View>
   );
 };
@@ -160,15 +194,48 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#666',
   },
-  input: {
+  choicesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  choiceButton: {
     backgroundColor: 'white',
     borderWidth: 2,
     borderColor: '#ddd',
     borderRadius: 10,
-    padding: 15,
-    fontSize: 20,
-    textAlign: 'center',
-    marginBottom: 20,
+    padding: 20,
+    width: '48%',
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 70,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  selectedChoiceButton: {
+    borderColor: '#007AFF',
+    backgroundColor: '#E8F4FD',
+  },
+  correctChoiceButton: {
+    borderColor: '#34C759',
+    backgroundColor: '#E8F8EA',
+  },
+  incorrectChoiceButton: {
+    borderColor: '#FF3B30',
+    backgroundColor: '#FFF2F1',
+  },
+  choiceButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  selectedChoiceButtonText: {
+    color: '#007AFF',
   },
   answerText: {
     fontSize: 18,
@@ -180,22 +247,11 @@ const styles = StyleSheet.create({
   buttonContainer: {
     gap: 10,
   },
-  submitButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
   skipButton: {
     backgroundColor: '#E0E0E0',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
   },
   skipButtonText: {
     color: '#666',
